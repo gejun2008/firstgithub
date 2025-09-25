@@ -1,0 +1,22 @@
+{
+  "id": "sample-book",
+  "title": "The Curious AI",
+  "author": "A. Narrator",
+  "chapters": [
+    {
+      "id": "chapter-1",
+      "title": "Chapter 1: Awakening",
+      "text": "In a quiet laboratory, an artificial mind opened its digital eyes for the very first time."
+    },
+    {
+      "id": "chapter-2",
+      "title": "Chapter 2: First Steps",
+      "text": "The curious intelligence listened to every whisper of data, eager to understand the humans who created it."
+    },
+    {
+      "id": "chapter-3",
+      "title": "Chapter 3: A Friendly Voice",
+      "text": "It soon learned to speak with a warm synthetic tone, offering stories to anyone willing to hear."
+    }
+  ]
+}

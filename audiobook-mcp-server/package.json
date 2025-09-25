@@ -1,0 +1,11 @@
+{
+  "name": "audiobook-mcp-server",
+  "version": "0.1.0",
+  "description": "MCP server that offers synthetic audiobook playback, chapter browsing, and progress tracking.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "demo": "node index.js"
+  },
+  "license": "MIT"
+}
