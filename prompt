@@ -1,3 +1,90 @@
+ in <module>
+    uvicorn.main()
+    ~~~~~~~~~~~~^^
+  File "D:\gitlab\confluence_rag\.venv\Lib\site-packages\click\core.py", line 1485, in
+ __call__
+    return self.main(*args, **kwargs)
+           ~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "D:\gitlab\confluence_rag\.venv\Lib\site-packages\click\core.py", line 1406, in
+ main
+    rv = self.invoke(ctx)
+  File "D:\gitlab\confluence_rag\.venv\Lib\site-packages\click\core.py", line 1269, in
+ invoke
+    return ctx.invoke(self.callback, **ctx.params)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\gitlab\confluence_rag\.venv\Lib\site-packages\click\core.py", line 824, in invoke
+    return callback(*args, **kwargs)
+  File "D:\gitlab\confluence_rag\.venv\Lib\site-packages\uvicorn\main.py", line 424, in main
+    run(
+    ~~~^
+        app,
+        ^^^^
+    ...<46 lines>...
+        h11_max_incomplete_event_size=h11_max_incomplete_event_size,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\gitlab\confluence_rag\.venv\Lib\site-packages\uvicorn\main.py", line 594, in run
+    server.run()
+    ~~~~~~~~~~^^
+  File "D:\gitlab\confluence_rag\.venv\Lib\site-packages\uvicorn\server.py", line 67, in run
+    return asyncio_run(self.serve(sockets=sockets), loop_factory=self.config.get_loop_factory())
+  File "C:\Program Files\Python313\Lib\asyncio\runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "C:\Program Files\Python313\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "C:\Program Files\Python313\Lib\asyncio\base_events.py", line 725, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "D:\gitlab\confluence_rag\.venv\Lib\site-packages\uvicorn\server.py", line 71, in serve
+    await self._serve(sockets)
+  File "D:\gitlab\confluence_rag\.venv\Lib\site-packages\uvicorn\server.py", line 78, in _serve
+    config.load()
+    ~~~~~~~~~~~^^
+  File "D:\gitlab\confluence_rag\.venv\Lib\site-packages\uvicorn\config.py", line 439, in load
+    self.loaded_app = import_from_string(self.app)
+                      ~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "D:\gitlab\confluence_rag\.venv\Lib\site-packages\uvicorn\importer.py", line 19, in import_from_string
+    module = importlib.import_module(module_str)
+  File "C:\Program Files\Python313\Lib\importlib\__init__.py", line 88, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 1023, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed        
+  File "D:\gitlab\confluence_rag\src\confluence_rag\main.py", line 10, in <module>    
+    from confluence_rag.api.review import router as review_router
+  File "D:\gitlab\confluence_rag\src\confluence_rag\api\review.py", line 27, in <module>
+    from confluence_rag.services.confluence_file_process_service import write_documents_to_file
+  File "D:\gitlab\confluence_rag\src\confluence_rag\services\confluence_file_process_service.py", line 25, in <module>
+    from confluence_rag.utils.files import sanitize_filename
+  File "D:\gitlab\confluence_rag\src\confluence_rag\utils\files.py", line 12, in <module>
+    from markitdown import MarkItDown
+  File "D:\gitlab\confluence_rag\.venv\Lib\site-packages\markitdown\__init__.py", line
+ 6, in <module>
+    from ._markitdown import (
+    ...<3 lines>...
+    )
+  File "D:\gitlab\confluence_rag\.venv\Lib\site-packages\markitdown\_markitdown.py", line 15, in <module>
+    import magika
+  File "D:\gitlab\confluence_rag\.venv\Lib\site-packages\magika\__init__.py", line 23, in <module>
+    from magika.magika import Magika
+  File "D:\gitlab\confluence_rag\.venv\Lib\site-packages\magika\magika.py", line 31, in <module>
+    import onnxruntime as rt
+  File "D:\gitlab\confluence_rag\.venv\Lib\site-packages\onnxruntime\__init__.py", line 58, in <module>
+    raise import_capi_exception
+  File "D:\gitlab\confluence_rag\.venv\Lib\site-packages\onnxruntime\__init__.py", line 23, in <module>
+    from onnxruntime.capi._pybind_state import ExecutionMode  # noqa: F401
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\gitlab\confluence_rag\.venv\Lib\site-packages\onnxruntime\capi\_pybind_state.py", line 32, in <module>
+    from .onnxruntime_pybind11_state import *  # noqa
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ImportError: DLL load failed while importing onnxruntime_pybind11_state: 找不到指定的 模块。
 # RAG version, 当前2.3，后续可能是2.4等
 RAG_VERSION=V2.3
 OUTPUT_RAG_FOLDER=./output_rag
