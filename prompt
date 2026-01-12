@@ -1,3 +1,27 @@
+# RAG version, 当前2.3，后续可能是2.4等
+RAG_VERSION=V2.3
+OUTPUT_RAG_FOLDER=./output_rag
+# VL 模型配置（可选）
+ENABLE_VISION_ANALYSIS=true
+VISION_MODEL=qwen-vl-max
+VISION_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+VISION_API_KEY=sk-15f46235f1d347d7849040d3ee599232
+# CONFLUENCE 配置
+CONFLUENCE_BASE_URL=https://wiki.eniot.io
+CONFLUENCE_API_TOKEN=WWW.51idc.com
+CONFLUENCE_EMAIL=lei.xue
+# Review 服务配置
+REVIEW_API_URL=http://localhost:8001
+# LLM 配置
+LLM_MODEL=qwen-max
+LLM_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+LLM_API_KEY=sk-15f46235f1d347d7849040d3ee599232
+# LightRAG 配置
+LIGHTRAG_PROXY=http://10.10.10.10:60134
+# LIGHTRAG_ENDPOINT should point to the base URL (no path); paths are composed in code
+LIGHTRAG_ENDPOINT=http://ai-ops0007.eniot.io:9623
+
+
 SYSTEM PROMPT FOR COPILOT AGENT — LightRAG + Confluence MCP Pipeline
 
 你是一个资深 RAG / Agent / 知识库工程师，负责生成一个完整可运行的知识库构建 pipeline。
