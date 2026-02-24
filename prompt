@@ -1,4 +1,179 @@
-https://prod.liveshare.vsengsaas.visualstudio.com/join?1E97A2AF5FB3D199A270726C46C43538111A
+"""LangGraph wrapper for DeepAgent - compatible with deep-agents-ui.
+
+Architecture:
+- RAG-first: Every query searches ChromaDB + LightRAG first
+- Direct tools: MCP (context7, cmdb), search (tavily) as main agent tools
+- Skills: Progressive disclosure via SkillsMiddleware
+- Subagents: Reserved for complex multi-step tasks (plan → execute → reflect → retry)
+
+Run with: langgraph dev
+Also run: python -m uvicorn src.api.ingest_server:app --port 8600
+"""
+from __future__ import annotations
+
+import asyncio
+import os
+import sys
+from typing import Annotated
+
+import dotenv
+from typing_extensions import TypedDict
+from langgraph.graph import StateGraph, START, END
+from langgraph.graph.message import add_messages
+from langchain_core.messages import SystemMessage
+
+# Add src to path for imports
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from deepagents.backends.filesystem import FilesystemBackend
+from src.config import get_llm, get_settings
+from src.tools.mcp_tools import load_mcp_tools
+from src.rag.rag_context import extract_query_from_messages, query_all_rag_context
+
+dotenv.load_dotenv()
+
+
+# Monkey-patch FilesystemBackend.ls_info to fix Windows path separator issue
+# When virtual_mode=True, paths should use forward slashes, but Windows uses backslashes
+_original_ls_info = FilesystemBackend.ls_info
+
+def _patched_ls_info(self, path: str):
+    """Patched ls_info that normalizes Windows backslashes to forward slashes."""
+    results = _original_ls_info(self, path)
+    if self.virtual_mode:
+        for item in results:
+            if "path" in item:
+                # Convert Windows backslashes to forward slashes for virtual paths
+                item["path"] = item["path"].replace("\\", "/")
+    return results
+
+FilesystemBackend.ls_info = _patched_ls_info
+
+# Compact system prompt - RAG context injected dynamically
+SYSTEM_PROMPT_TEMPLATE = """You are an intelligent assistant. Answer based on the provided context.
+
+## Knowledge Base Context:
+{rag_context}
+
+## Instructions:
+1. FIRST, answer using the Knowledge Base Context above.
+2. If context contains relevant keywords/data, synthesize an answer from it.
+3. Use tools ONLY when context has NO relevant information, or user explicitly asks.
+4. Do NOT say "context is insufficient" if it contains related information.
+
+## Tools:
+- context7: Technical/API documentation lookup
+- cmdb: Query infrastructure products, regions, components, services
+- tavily_search: General web search
+
+Be concise and accurate. Prefer answering from context over calling tools."""
+
+
+async def build_graph():
+    """Build the agent graph with RAG-first processing."""
+    llm = get_llm()
+    settings = get_settings()
+    
+    # Setup FilesystemBackend for skills (reads from project root)
+    # IMPORTANT: virtual_mode=True so that skill paths are virtual (e.g., /skills/...)
+    # This is required because read_file tool rejects Windows absolute paths (D:\...)
+    project_root = os.path.dirname(os.path.abspath(__file__))
+    backend = await asyncio.to_thread(
+        FilesystemBackend,
+        root_dir=project_root,
+        virtual_mode=True,  # Use virtual paths for skill files (required for read_file)
+    )
+    
+    # Load MCP tools (context7 for docs, cmdb for infra) - done once at startup
+    mcp_tools = await load_mcp_tools(
+        mcp_servers=[
+            {
+                "url": "https://mcp.context7.com/mcp",
+                "headers": {"CONTEXT7_API_KEY": settings.context7_api_key},
+            },
+            {
+                "url": "http://127.0.0.1:8001/mcp",
+            },
+        ]
+    )
+    
+    # Collect all direct tools for the main agent
+    # Simple tool calls don't need subagent overhead (no plan/reflect/retry needed)
+    from src.agents.subagents import get_agent_tools, get_subagents
+    agent_tools = get_agent_tools(mcp_tools=mcp_tools, include_rag=False)
+    subagents = get_subagents()
+    
+    # Define skills sources (relative to backend root_dir)
+    # With virtual_mode=True, paths should use POSIX format (leading /)
+    skills_sources = [
+        "/skills/user/",      # User-level skills
+        "/skills/project/",   # Project-level skills (overrides user)
+    ]
+    
+    from deepagents import create_deep_agent
+    
+    # Base system prompt (RAG context injected dynamically per request)
+    base_system_prompt = """You are an intelligent assistant. Answer based on the provided context.
+
+## Instructions:
+1. FIRST, answer using the Knowledge Base Context above.
+2. If context contains relevant keywords/data, synthesize an answer from it.
+3. Use tools ONLY when context has NO relevant information, or user explicitly asks.
+4. Do NOT say "context is insufficient" if it contains related information.
+
+## Tools:
+- context7: Technical/API documentation lookup
+- cmdb: Query infrastructure products, regions, components, services
+- tavily_search: General web search
+
+Be concise and accurate. Prefer answering from context over calling tools."""
+    
+    base_agent = create_deep_agent(
+        model=llm,
+        tools=agent_tools,  # Direct tools: MCP (context7, cmdb) + search (tavily)
+        skills=skills_sources,
+        subagents=subagents if subagents else None,
+        memory=[],
+        backend=backend,
+        system_prompt=base_system_prompt,
+    )
+    
+    # Define state
+    class AgentState(TypedDict):
+        messages: Annotated[list, add_messages]
+    
+    # Single combined node: RAG query + agent execution
+    async def agent_with_rag(state: AgentState) -> AgentState:
+        """Query RAG (ChromaDB + LightRAG), inject context, run agent."""
+        messages = list(state.get("messages", []))
+
+        # Extract query and fetch context from all RAG sources concurrently
+        query = extract_query_from_messages(messages)
+        rag_context = await query_all_rag_context(query)
+
+        # Build dynamic system prompt with RAG context
+        system_prompt = SYSTEM_PROMPT_TEMPLATE.format(rag_context=rag_context)
+
+        # Prepend/replace system message (SkillsMiddleware will append skills)
+        if messages and hasattr(messages[0], "type") and messages[0].type == "system":
+            messages[0] = SystemMessage(content=system_prompt)
+        else:
+            messages.insert(0, SystemMessage(content=system_prompt))
+
+        result = await base_agent.ainvoke({"messages": messages})
+        return result
+    
+    # Build simple graph: START -> agent -> END
+    graph = StateGraph(AgentState)
+    graph.add_node("agent", agent_with_rag)
+    graph.add_edge(START, "agent")
+    graph.add_edge("agent", END)
+    
+    return graph.compile()
+
+
+# Export for LangGraph CLI
+graph = build_graph
 
 https://teams.microsoft.com/meet/47770547225906?p=neOGCOnNvdjswwhFZX
 
